@@ -36,6 +36,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Book() BookResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
 }
@@ -52,10 +53,10 @@ type ComplexityRoot struct {
 	}
 
 	Book struct {
-		Author func(childComplexity int) int
-		ID     func(childComplexity int) int
-		Isbn   func(childComplexity int) int
-		Name   func(childComplexity int) int
+		Author   func(childComplexity int) int
+		Category func(childComplexity int) int
+		ID       func(childComplexity int) int
+		Name     func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -67,6 +68,9 @@ type ComplexityRoot struct {
 	}
 }
 
+type BookResolver interface {
+	Category(ctx context.Context, obj *models.Book) (string, error)
+}
 type MutationResolver interface {
 	AddBook(ctx context.Context, input *model.NewBook, author []*model.NewAuthor) (*models.Book, error)
 }
@@ -124,19 +128,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Book.Author(childComplexity), true
 
+	case "Book.Category":
+		if e.complexity.Book.Category == nil {
+			break
+		}
+
+		return e.complexity.Book.Category(childComplexity), true
+
 	case "Book.id":
 		if e.complexity.Book.ID == nil {
 			break
 		}
 
 		return e.complexity.Book.ID(childComplexity), true
-
-	case "Book.isbn":
-		if e.complexity.Book.Isbn == nil {
-			break
-		}
-
-		return e.complexity.Book.Isbn(childComplexity), true
 
 	case "Book.name":
 		if e.complexity.Book.Name == nil {
@@ -231,7 +235,7 @@ var sources = []*ast.Source{
 	&ast.Source{Name: "graph/schema.graphql", Input: `type Book {
   id: Int!
   name: String!
-  isbn: Int!
+  Category: String!
   author: [Author!]!
 }
 
@@ -244,7 +248,7 @@ type Author {
 
 input NewBook {
   name: String!
-  isbn: Int!
+  Category: String!
 }
 
 input NewAuthor {
@@ -542,7 +546,7 @@ func (ec *executionContext) _Book_name(ctx context.Context, field graphql.Collec
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Book_isbn(ctx context.Context, field graphql.CollectedField, obj *models.Book) (ret graphql.Marshaler) {
+func (ec *executionContext) _Book_Category(ctx context.Context, field graphql.CollectedField, obj *models.Book) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -553,13 +557,13 @@ func (ec *executionContext) _Book_isbn(ctx context.Context, field graphql.Collec
 		Object:   "Book",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Isbn, nil
+		return ec.resolvers.Book().Category(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -571,9 +575,9 @@ func (ec *executionContext) _Book_isbn(ctx context.Context, field graphql.Collec
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Book_author(ctx context.Context, field graphql.CollectedField, obj *models.Book) (ret graphql.Marshaler) {
@@ -1845,9 +1849,9 @@ func (ec *executionContext) unmarshalInputNewBook(ctx context.Context, obj inter
 			if err != nil {
 				return it, err
 			}
-		case "isbn":
+		case "Category":
 			var err error
-			it.Isbn, err = ec.unmarshalNInt2int(ctx, v)
+			it.Category, err = ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -1921,22 +1925,31 @@ func (ec *executionContext) _Book(ctx context.Context, sel ast.SelectionSet, obj
 		case "id":
 			out.Values[i] = ec._Book_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._Book_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
-		case "isbn":
-			out.Values[i] = ec._Book_isbn(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+		case "Category":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Book_Category(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "author":
 			out.Values[i] = ec._Book_author(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))

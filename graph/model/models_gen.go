@@ -8,6 +8,6 @@ type NewAuthor struct {
 }
 
 type NewBook struct {
-	Name string `json:"name"`
-	Isbn int    `json:"isbn"`
+	Name     string `json:"name"`
+	Category string `json:"Category"`
 }

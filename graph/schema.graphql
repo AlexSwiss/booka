@@ -1,7 +1,7 @@
 type Book {
   id: Int!
   name: String!
-  isbn: Int!
+  Category: String!
   author: [Author!]!
 }
 
@@ -14,7 +14,7 @@ type Author {
 
 input NewBook {
   name: String!
-  isbn: Int!
+  Category: String!
 }
 
 input NewAuthor {
