@@ -36,7 +36,6 @@ type Config struct {
 }
 
 type ResolverRoot interface {
-	Book() BookResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
 }
@@ -53,7 +52,7 @@ type ComplexityRoot struct {
 	}
 
 	Book struct {
-		Author   func(childComplexity int) int
+		Authors  func(childComplexity int) int
 		Category func(childComplexity int) int
 		ID       func(childComplexity int) int
 		Name     func(childComplexity int) int
@@ -68,9 +67,6 @@ type ComplexityRoot struct {
 	}
 }
 
-type BookResolver interface {
-	Category(ctx context.Context, obj *models.Book) (string, error)
-}
 type MutationResolver interface {
 	AddBook(ctx context.Context, input *model.NewBook, author []*model.NewAuthor) (*models.Book, error)
 }
@@ -121,12 +117,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Author.Lastname(childComplexity), true
 
-	case "Book.author":
-		if e.complexity.Book.Author == nil {
+	case "Book.authors":
+		if e.complexity.Book.Authors == nil {
 			break
 		}
 
-		return e.complexity.Book.Author(childComplexity), true
+		return e.complexity.Book.Authors(childComplexity), true
 
 	case "Book.Category":
 		if e.complexity.Book.Category == nil {
@@ -236,7 +232,7 @@ var sources = []*ast.Source{
   id: Int!
   name: String!
   Category: String!
-  author: [Author!]!
+  authors: [Author!]!
 }
 
 type Author {
@@ -557,13 +553,13 @@ func (ec *executionContext) _Book_Category(ctx context.Context, field graphql.Co
 		Object:   "Book",
 		Field:    field,
 		Args:     nil,
-		IsMethod: true,
+		IsMethod: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Book().Category(rctx, obj)
+		return obj.Category, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -580,7 +576,7 @@ func (ec *executionContext) _Book_Category(ctx context.Context, field graphql.Co
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Book_author(ctx context.Context, field graphql.CollectedField, obj *models.Book) (ret graphql.Marshaler) {
+func (ec *executionContext) _Book_authors(ctx context.Context, field graphql.CollectedField, obj *models.Book) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -597,7 +593,7 @@ func (ec *executionContext) _Book_author(ctx context.Context, field graphql.Coll
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Author, nil
+		return obj.Authors, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1925,31 +1921,22 @@ func (ec *executionContext) _Book(ctx context.Context, sel ast.SelectionSet, obj
 		case "id":
 			out.Values[i] = ec._Book_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "name":
 			out.Values[i] = ec._Book_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "Category":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Book_Category(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
-		case "author":
-			out.Values[i] = ec._Book_author(ctx, field, obj)
+			out.Values[i] = ec._Book_Category(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
+			}
+		case "authors":
+			out.Values[i] = ec._Book_authors(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))

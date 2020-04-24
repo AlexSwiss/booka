@@ -12,20 +12,28 @@ import (
 	"github.com/AlexSwiss/bookworm/graph/models"
 )
 
-func (r *bookResolver) Category(ctx context.Context, obj *models.Book) (string, error) {
-	panic(fmt.Errorf("not implemented"))
-}
-
 func (r *mutationResolver) AddBook(ctx context.Context, input *model.NewBook, author []*model.NewAuthor) (*models.Book, error) {
-	panic(fmt.Errorf("not implemented"))
+	//Fetch Connection and close db
+	db := models.FetchConnection()
+	defer db.Close()
+
+	//Create the book using the input structs
+	book := models.Book{Name: input.Name, Category: *&input.Category}
+
+	//initialize the author with the length of the input for author
+	book.Authors = make([]*models.Author, len(author))
+	//Loop and add all items
+	for index, item := range author {
+		book.Authors[index] = &models.Author{Firstname: item.Firstname, Lastname: item.Lastname}
+	}
+	//Create by passing the pointer to the book
+	db.Create(&book)
+	return &book, nil
 }
 
 func (r *queryResolver) Books(ctx context.Context) ([]*models.Book, error) {
 	panic(fmt.Errorf("not implemented"))
 }
-
-// Book returns generated.BookResolver implementation.
-func (r *Resolver) Book() generated.BookResolver { return &bookResolver{r} }
 
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
@@ -33,6 +41,5 @@ func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResol
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
-type bookResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

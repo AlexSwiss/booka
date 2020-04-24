@@ -6,7 +6,7 @@ import (
 )
 
 func FetchConnection() *gorm.DB {
-	db, err := gorm.Open("mysql", "root:rosecransB430@/golang")
+	db, err := gorm.Open("mysql", "root:rosecransB430@/bookworm")
 	if err != nil {
 		panic(err)
 	}
@@ -23,6 +23,6 @@ type Author struct {
 type Book struct {
 	ID       int       `json:"id" gorm:"primary_key"`
 	Name     string    `json:"name"`
-	Category int       `json:"category"`
-	Author   []*Author `json:"author"`
+	Category string    `json:"category"`
+	Authors  []*Author `json:"authors"`
 }

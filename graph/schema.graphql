@@ -2,7 +2,7 @@ type Book {
   id: Int!
   name: String!
   Category: String!
-  author: [Author!]!
+  authors: [Author!]!
 }
 
 type Author {
