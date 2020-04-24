@@ -23,9 +23,11 @@ input NewAuthor {
 }
 
 type Mutation {
-  AddBook(input: NewBook, author: [NewAuthor!]!): Book!
+  AddBook(input: NewBook, authors: [NewAuthor!]!): Book!
+  updateBook(id: Int, input: NewBook, authors: [NewAuthor] = []): Book!
+  deleteBook(id: Int): [Book!]!
 }
 
 type Query {
-  books: [Book!]!
+  books(search: String = ""): [Book!]!
 }
