@@ -1,0 +1,1 @@
+this a Go app built with gqlgen, graphql and Mysql.
