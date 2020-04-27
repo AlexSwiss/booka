@@ -1,1 +1,1 @@
-this a Go app built with gqlgen, graphql and Mysql.
+this a Go app built with gqlgen, graphql and Mysql. front end with react and apollo
