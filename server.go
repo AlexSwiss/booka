@@ -10,11 +10,23 @@ import (
 	"github.com/AlexSwiss/bookworm/graph"
 	"github.com/AlexSwiss/bookworm/graph/generated"
 	"github.com/AlexSwiss/bookworm/graph/models"
+	"github.com/go-chi/chi"
+	"github.com/rs/cors"
 )
 
 const defaultPort = "8080"
 
 func main() {
+
+	router := chi.NewRouter()
+
+	// Add CORS middleware around every request
+	// See https://github.com/rs/cors for full option listing
+	router.Use(cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowCredentials: true,
+		Debug:            true,
+	}).Handler)
 
 	//Migrate Db
 	db := models.FetchConnection()
@@ -32,5 +44,5 @@ func main() {
 	http.Handle("/query", srv)
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	log.Fatal(http.ListenAndServe(":"+port, router))
 }

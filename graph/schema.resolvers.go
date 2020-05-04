@@ -47,7 +47,7 @@ func (r *queryResolver) Books(ctx context.Context, search *string) ([]*models.Bo
 	//Create an array of recipes to populate
 	var books []*models.Book
 	// .Preload loads the Ingredients relationship into each recipe
-	db.Preload("Ingredients").Find(&books)
+	db.Preload("Authors").Find(&books)
 	return books, nil
 }
 
